@@ -12,6 +12,8 @@
 
 #include <ESP8266WiFiMulti.h>
 
+char auth[] = "YourAuthToken";
+
 ESP8266WiFiMulti wifiMulti;
 
 Timer tm;
@@ -112,8 +114,12 @@ void setup() {
   tm.every(1000, getPpm);
   tm.every(1000, getTemp);
   tm.every(1000, getHumidity);
+  tm.every(30000, CheckConnection);
+  tm.every(10000, pushData);
 
   myHumidity.begin();
+  
+  Blynk.begin(auth);  // Here your Arduino connects to the Blynk Cloud.
   
 }
 
@@ -262,12 +268,40 @@ void getPpm() {
 
 
 
+void CheckConnection(){    // check every 15s if connected to Blynk server
+  if(!Blynk.connected()){
+    Serial.println("Not connected to Blynk server"); 
+    //Blynk.connect();  // try to connect to server with default timeout
+    Blynk.begin(auth);
+  }
+  else{
+    Serial.println("Connected to Blynk server");     
+  }
+}
+
+
+void pushData() {
+
+  if (sppm > 0) { Blynk.virtualWrite(V0, sppm); }
+  
+  if (st > 0) { Blynk.virtualWrite(V1, st); }
+  if (sh > 0) { Blynk.virtualWrite(V2, sh); }
+  
+}
+
+
+
+
 void loop() {
 
   if (WiFi.status() != WL_CONNECTED) {
     setup_wifi();
    }
    ArduinoOTA.handle();
+   
+  if (Blynk.connected()){
+    Blynk.run();     
+  }
 
  tm.update();
  delay(10);
